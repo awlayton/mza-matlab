@@ -1,4 +1,4 @@
-function [C, U] = mza(Y, varargin)
+function [C, U, FPI, NCE] = mza(Y, varargin)
 % MZA Management Zone Analyst delineation algorithm MATLAB implementation.
 %
 %    X = MZA(Y, C) Delineates C management zones from the data Y.
@@ -42,6 +42,8 @@ p.addOptional('max_iter', 300) % Maximum number of iterations to run
 
 p.parse(varargin{:});
 
+c = p.Results.c;
+
 d = lower(p.Results.d);
 switch d
     case {'euclidean', 'mahalanobis'}
@@ -55,7 +57,7 @@ switch d
                 ' (but it might still work in MATLAB)']);
 end
 
-U = initfcm(p.Results.c, n);
+U = initfcm(c, n);
 for I = 1:p.Results.max_iter
     % These two lines from stepfcm
     mf = U.^p.Results.m;       % MF matrix after exponential modification
@@ -66,7 +68,7 @@ for I = 1:p.Results.max_iter
     U_old = U;
     % These two lines from stepfcm
     tmp = D.^(-2/(p.Results.m-1));      % calculate new U, suppose expo != 1
-    U = tmp./(ones(p.Results.c, 1)*sum(tmp));
+    U = tmp./(ones(c, 1)*sum(tmp));
 
     % Check stopping criterion
     if norm(U - U_old) <= p.Results.eps
@@ -76,5 +78,17 @@ end
 
 % Paper does not say how the hard assigments are made...
 [~, C] = max(U);
+
+% Calculate cluster performance indices
+% TODO: Should these be run on the fuzzy or the hard assignments?
+if nargout >= 3
+    % Fuzziness performance index
+    FPI = 1 - c / (c - 1) * (1 - mean(sum(U.^2, 1), 2));
+end
+if nargout >= 4
+    % Normalized calssification entropy
+    % TODO: What base for the log does MZA use?
+    NCE = -mean(sum(U .* log(U), 1), 2) / (1 - c / n);
+end
 
 end
