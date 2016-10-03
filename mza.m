@@ -36,16 +36,21 @@ n = size(Y, 1);
 vnout = max(nargout - 1, 0);
 
 p = inputParser();
+addParam = 'addParameter';
+if ~ismethod(p, addParam)
+    % This makes it work in GNU Octave
+    addParam = 'addParamValue';
+end
 p.FunctionName = 'mza';
 % TODO: How to check c is integer?
 p.addRequired('c', @(c) isnumeric(c) && all(c > 1) && all(c < n));
 % Use MZA defaults rather than MATLAB ones
-p.addOptional('m', 1.30, ...
+p.(addParam)('m', 1.30, ...
         @(m) isnumeric(m) && isscalar(m) && (m > 1) && isfinite(m));
-p.addOptional('d', 'euclidean'); % Give to pdist
-p.addOptional('eps', 1e-4, @(e) isnumeric(e) && isscalar(e));
-p.addOptional('max_iter', 300) % Maximum number of iterations to run
-p.addOptional('info', false);
+p.(addParam)('d', 'euclidean'); % Give to pdist
+p.(addParam)('eps', 1e-4, @(e) isnumeric(e) && isscalar(e));
+p.(addParam)('max_iter', 300) % Maximum number of iterations to run
+p.(addParam)('info', false);
 
 % Parse options
 p.parse(varargin{:});
@@ -84,7 +89,8 @@ function [X, FPI, NCE, U] = domza(Y, c, m, d, epsilon, lmax, info)
 % Run a single delineation for a particular value of c
     n = size(Y, 1);
 
-    U = initfcm(c, n);
+    U = rand(c, n);
+    U = bsxfun(@rdivide, U, sum(U, 1));
     for IT = 1:lmax
         % These two lines from stepfcm
         mf = U .^ m; % MF matrix after exponential modification
